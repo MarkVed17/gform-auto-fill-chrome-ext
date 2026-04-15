@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GForm AI AutoFill</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="container">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-brand">
+        <svg class="header-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M9 5H7C5.895 5 5 5.895 5 7V19C5 20.105 5.895 21 7 21H17C18.105 21 19 20.105 19 19V7C19 5.895 18.105 5 17 5H15M9 5C9 5.552 9.448 6 10 6H14C14.552 6 15 5.552 15 5M9 5C9 4.448 9.448 4 10 4H14C14.552 4 15 4.448 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1 class="header-title">GForm AutoFill</h1>
+      </div>
+      <span class="field-count" id="fieldCount">Detecting…</span>
+    </header>
+
+    <!-- Alert: not on a Google Form -->
+    <div class="alert alert--warning hidden" id="notFormAlert" role="alert">
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      Open a Google Form tab first, then click this icon.
+    </div>
+
+    <!-- Alert: no API key -->
+    <div class="alert alert--warning hidden" id="noApiKeyAlert" role="alert">
+      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+      No API key set. Expand <strong>Settings</strong> below.
+    </div>
+
+    <!-- Main fill panel -->
+    <main class="fill-panel" id="fillPanel">
+      <label class="field-label" for="promptInput">Describe how to fill the form</label>
+      <textarea
+        id="promptInput"
+        class="prompt-textarea"
+        rows="4"
+        placeholder="e.g. Fill with name John Doe, email john@example.com, age 28, agree to terms"
+      ></textarea>
+
+      <button class="btn btn--primary" id="fillBtn" disabled>
+        <span class="btn-text">Fill Form with AI</span>
+        <span class="spinner hidden" aria-hidden="true"></span>
+      </button>
+
+      <!-- Status / error messages -->
+      <div
+        class="status hidden"
+        id="statusArea"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></div>
+
+      <!-- Results summary -->
+      <div class="results hidden" id="resultsArea">
+        <div class="results__row">
+          <span class="results__label">Filled</span>
+          <span class="results__value results__value--success" id="filledCount">0</span>
+        </div>
+        <div class="results__row">
+          <span class="results__label">Skipped</span>
+          <span class="results__value" id="skippedCount">0</span>
+        </div>
+        <div class="results__row hidden" id="errorsRow">
+          <span class="results__label">Errors</span>
+          <span class="results__value results__value--error" id="errorsCount">0</span>
+        </div>
+        <ul class="error-list hidden" id="errorList"></ul>
+      </div>
+    </main>
+
+    <!-- Settings panel (collapsible) -->
+    <details class="settings" id="settingsPanel">
+      <summary class="settings__toggle">
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+        Settings
+      </summary>
+      <div class="settings__body">
+        <label class="field-label" for="apiKeyInput">Anthropic API Key</label>
+        <div class="api-key-wrapper">
+          <input
+            type="password"
+            id="apiKeyInput"
+            class="input"
+            placeholder="sk-ant-api03-..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button class="btn btn--icon" id="toggleKeyVisibility" aria-label="Show/hide API key" title="Show/hide API key">
+            <svg id="eyeIcon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
+            <svg id="eyeOffIcon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="hidden"><path fill-rule="evenodd" d="M3.28 2.22a.75.75 0 00-1.06 1.06l14.5 14.5a.75.75 0 101.06-1.06l-1.745-1.745a10.029 10.029 0 003.3-4.38 1.651 1.651 0 000-1.185A10.004 10.004 0 009.999 3a9.956 9.956 0 00-4.744 1.194L3.28 2.22zM7.752 6.69l1.092 1.092a2.5 2.5 0 013.374 3.373l1.091 1.092a4 4 0 00-5.557-5.557z" clip-rule="evenodd"/><path d="M10.748 13.93l2.523 2.523a9.987 9.987 0 01-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 010-1.186A10.007 10.007 0 012.49 6.907l1.064 1.065a8.487 8.487 0 00-1.308 2.28 8.496 8.496 0 007.753 5.01c.34 0 .673-.02 1-.058z"/></svg>
+          </button>
+        </div>
+        <div class="settings__actions">
+          <button class="btn btn--secondary btn--sm" id="saveKeyBtn">Save Key</button>
+          <span class="key-status" id="keyStatus"></span>
+        </div>
+      </div>
+    </details>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
